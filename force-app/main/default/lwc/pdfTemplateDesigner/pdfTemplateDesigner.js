@@ -920,15 +920,17 @@ export default class PdfTemplateDesigner extends LightningElement {
         }
 
         if (item.type === 'image') {
-            const configuredSrc = item.useSampleImage ? '' : (item.imageSrc || '');
-            const src = this.escapeXml(configuredSrc);
+            const configuredSrc = item.useSampleImage
+                ? '{!URLFOR($Resource.PdfBuilderSampleImage)}'
+                : (item.imageSrc || '');
+            const src = item.useSampleImage ? configuredSrc : this.escapeXml(configuredSrc);
             const fit = item.imageFit || 'contain';
             const opacity = Math.max(0, Math.min(100, item.imageOpacity ?? 100)) / 100;
             const radius = item.imageBorderRadius || 0;
             const position = `${item.imagePositionX || 'center'} ${item.imagePositionY || 'center'}`;
 
             if (!configuredSrc) {
-                return `                <div class="pdf-element" style="${style};display:flex;align-items:center;justify-content:center;color:#777;background:#f3f3f3;">Sample Image</div>`;
+                return `                <div class="pdf-element" style="${style};display:flex;align-items:center;justify-content:center;color:#777;background:#f3f3f3;">Image</div>`;
             }
 
             return `                <div class="pdf-element" style="${style}"><img src="${src}" alt="${this.escapeXml(item.imageAlt || 'Image')}" style="width:100%;height:100%;object-fit:${fit};object-position:${position};opacity:${opacity};border-radius:${radius}mm;display:block;"/></div>`;
