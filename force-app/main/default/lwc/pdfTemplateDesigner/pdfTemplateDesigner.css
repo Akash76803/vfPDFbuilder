@@ -274,14 +274,20 @@
     border-top: 1px solid #777;
 }
 
-.type-image .element-content {
+.type-image {
+    padding: 0;
+}
+
+.image-preview-frame {
+    width: 100%;
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
     background: #f3f3f3;
-    border: 1px solid #ddd;
-    color: #706e6b;
+}
+
+.image-preview {
+    pointer-events: none;
+    user-select: none;
 }
 
 .resize-handle {
@@ -540,4 +546,9 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+}
+
+
+.image-designer .toggle-row {
+    margin-top: .7rem;
 }
