@@ -118,7 +118,8 @@
                             <span>Generated Visualforce Page</span>
                             <lightning-button label="Export .page" onclick={handleExportVf}></lightning-button>
                         </div>
-                        <pre>{vfPageSource}</pre>
+                        <pre>{generatedVfSource}</pre>
+                        <a class="vf-download-link" href={vfDownloadHref} download="GeneratedPdf.page">Download VF Page</a>
                     </div>
                 </template>
                 <template if:true={showBottomLayers}>
