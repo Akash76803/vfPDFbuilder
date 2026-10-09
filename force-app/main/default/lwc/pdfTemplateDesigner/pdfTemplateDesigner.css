@@ -373,3 +373,60 @@
         grid-template-columns: 200px minmax(520px, 1fr) 260px;
     }
 }
+
+
+.toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--panel-border);
+    margin: 0 .15rem;
+}
+
+.alignment-tools {
+    gap: .2rem;
+}
+
+.mini-tool {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #c9c9c9;
+    border-radius: .25rem;
+    background: #fff;
+    cursor: pointer;
+    font-size: .7rem;
+    font-weight: 700;
+    color: #444;
+}
+
+.mini-tool:hover:not(:disabled) {
+    border-color: var(--brand);
+    color: var(--brand);
+    background: #f4f9ff;
+}
+
+.mini-tool:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+.grid-controls {
+    padding-left: .2rem;
+}
+
+.grid-size-input {
+    width: 82px;
+}
+
+.page.show-grid {
+    background-image:
+        linear-gradient(to right, rgba(1, 118, 211, .09) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(1, 118, 211, .09) 1px, transparent 1px);
+    background-size: var(--grid-step) var(--grid-step);
+}
+
+.layer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .4rem;
+}
