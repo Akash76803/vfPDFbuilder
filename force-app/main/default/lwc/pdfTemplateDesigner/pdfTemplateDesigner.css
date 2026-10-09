@@ -27,6 +27,10 @@
 
 .right-panel {
     border-left: 1px solid var(--panel-border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .panel-section {
@@ -344,12 +348,15 @@
 }
 
 .inspector-scroll {
-    height: calc(100% - 42px);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 0 .9rem 1rem;
 }
 
 .right-panel > .section-title {
+    flex: 0 0 auto;
     padding: .9rem .9rem .4rem;
 }
 
@@ -526,4 +533,11 @@
 
 .icon-text-button:hover {
     background: #f3f3f3;
+}
+
+
+.right-panel .no-selection {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }
