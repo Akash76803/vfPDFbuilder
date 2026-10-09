@@ -5,6 +5,16 @@ const MM_TO_PX = 96 / 25.4;
 const MIN_SIZE_MM = 2;
 const HISTORY_LIMIT = 50;
 
+const SAMPLE_IMAGE_DATA_URI = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220">' +
+    '<rect width="320" height="220" fill="#f3f3f3"/>' +
+    '<rect x="26" y="28" width="268" height="164" rx="8" fill="#ffffff" stroke="#9aa0a6" stroke-width="6"/>' +
+    '<circle cx="108" cy="92" r="24" fill="#c5cbd3"/>' +
+    '<path d="M52 168l66-56 42 34 34-28 74 50H52z" fill="#9aa0a6"/>' +
+    '<text x="160" y="205" text-anchor="middle" font-family="Arial" font-size="18" fill="#5f6368">Sample Image</text>' +
+    '</svg>'
+);
+
 const PAGE_SIZES = {
     A4: { width: 210, height: 297 },
     LETTER: { width: 215.9, height: 279.4 }
@@ -76,6 +86,32 @@ export default class PdfTemplateDesigner extends LightningElement {
         ];
     }
 
+    get imageFitOptions() {
+        return [
+            { label: 'Contain', value: 'contain' },
+            { label: 'Cover', value: 'cover' },
+            { label: 'Fill', value: 'fill' },
+            { label: 'None', value: 'none' },
+            { label: 'Scale Down', value: 'scale-down' }
+        ];
+    }
+
+    get imagePositionXOptions() {
+        return [
+            { label: 'Left', value: 'left' },
+            { label: 'Center', value: 'center' },
+            { label: 'Right', value: 'right' }
+        ];
+    }
+
+    get imagePositionYOptions() {
+        return [
+            { label: 'Top', value: 'top' },
+            { label: 'Center', value: 'center' },
+            { label: 'Bottom', value: 'bottom' }
+        ];
+    }
+
     get borderStyleOptions() {
         return [
             { label: 'None', value: 'none' },
@@ -138,6 +174,10 @@ export default class PdfTemplateDesigner extends LightningElement {
         return this.selectedElement?.type === 'table';
     }
 
+    get selectedIsImage() {
+        return this.selectedElement?.type === 'image';
+    }
+
     get selectedTableColumns() {
         return (this.selectedElement?.tableColumns || []).map((column, index) => ({
             ...column,
@@ -173,7 +213,8 @@ export default class PdfTemplateDesigner extends LightningElement {
         return this.elements.map((item, index) => {
             const selected = item.id === this.selectedElementId;
             const isTable = item.type === 'table';
-            const displayText = item.type === 'line' || item.type === 'rectangle' || isTable ? '' : item.value || item.label;
+            const isImage = item.type === 'image';
+            const displayText = item.type === 'line' || item.type === 'rectangle' || isTable || isImage ? '' : item.value || item.label;
             const fontWeight = item.bold ? '700' : '400';
             const fontStyle = item.italic ? 'italic' : 'normal';
             const effectiveBorderWidth = item.type === 'line' ? Math.max(item.borderWidth || 1, 1) : item.borderWidth || 0;
@@ -201,7 +242,16 @@ export default class PdfTemplateDesigner extends LightningElement {
                 ...item,
                 selected,
                 isTable,
+                isImage,
                 displayText,
+                imageSrc: item.useSampleImage ? SAMPLE_IMAGE_DATA_URI : (item.imageSrc || SAMPLE_IMAGE_DATA_URI),
+                imageAlt: item.imageAlt || 'Image',
+                imageStyle:
+                    `width:100%;height:100%;display:block;object-fit:${item.imageFit || 'contain'};` +
+                    `object-position:${item.imagePositionX || 'center'} ${item.imagePositionY || 'center'};` +
+                    `opacity:${Math.max(0, Math.min(100, item.imageOpacity ?? 100)) / 100};` +
+                    `border-radius:${(item.imageBorderRadius || 0) * MM_TO_PX}px;`,
+                imageFrameStyle: `width:100%;height:100%;overflow:hidden;background:${item.backgroundColor || '#ffffff'};`,
                 tableColumns,
                 previewRows,
                 tableShowHeader: item.tableShowHeader !== false,
@@ -319,6 +369,16 @@ export default class PdfTemplateDesigner extends LightningElement {
             borderWidth: type === 'rectangle' || type === 'table' || type === 'section' ? 1 : 0,
             borderStyle: type === 'line' || type === 'rectangle' || type === 'table' || type === 'section' ? 'solid' : 'none',
             padding: type === 'text' || type === 'field' ? 1 : 0,
+            ...(type === 'image' ? {
+                imageSrc: '',
+                imageAlt: 'Sample Image',
+                imageFit: 'contain',
+                imageOpacity: 100,
+                imageBorderRadius: 0,
+                imagePositionX: 'center',
+                imagePositionY: 'center',
+                useSampleImage: true
+            } : {}),
             ...(type === 'table' ? {
                 tableDataSource: '{{items}}',
                 tablePreviewRows: 3,
@@ -508,6 +568,36 @@ export default class PdfTemplateDesigner extends LightningElement {
 
     handleTextPropertyChange(event) {
         this.patchSelected({ [event.currentTarget.dataset.field]: event.target.value });
+    }
+
+    handleImagePropertyChange(event) {
+        const field = event.currentTarget.dataset.imageField;
+        this.patchSelected({
+            [field]: event.target.value,
+            ...(field === 'imageSrc' ? { useSampleImage: false } : {})
+        });
+    }
+
+    handleImageSelectPropertyChange(event) {
+        this.patchSelected({ [event.currentTarget.dataset.imageField]: event.detail.value });
+    }
+
+    handleImageNumberPropertyChange(event) {
+        const field = event.currentTarget.dataset.imageField;
+        const raw = Number(event.target.value);
+        if (!Number.isFinite(raw)) return;
+
+        let value = raw;
+        if (field === 'imageOpacity') value = this.clamp(raw, 0, 100);
+        if (field === 'imageBorderRadius') value = Math.max(0, raw);
+
+        this.patchSelected({ [field]: value });
+    }
+
+    handleImageBooleanPropertyChange(event) {
+        const field = event.currentTarget.dataset.imageField;
+        const checked = event.target.checked;
+        this.patchSelected({ [field]: checked });
     }
 
     handleTablePropertyChange(event) {
@@ -830,8 +920,18 @@ export default class PdfTemplateDesigner extends LightningElement {
         }
 
         if (item.type === 'image') {
-            const src = this.escapeXml(item.value || '');
-            return `                <div class="pdf-element" style="${style}"><apex:image url="${src}" width="100%" height="100%"/></div>`;
+            const configuredSrc = item.useSampleImage ? '' : (item.imageSrc || '');
+            const src = this.escapeXml(configuredSrc);
+            const fit = item.imageFit || 'contain';
+            const opacity = Math.max(0, Math.min(100, item.imageOpacity ?? 100)) / 100;
+            const radius = item.imageBorderRadius || 0;
+            const position = `${item.imagePositionX || 'center'} ${item.imagePositionY || 'center'}`;
+
+            if (!configuredSrc) {
+                return `                <div class="pdf-element" style="${style};display:flex;align-items:center;justify-content:center;color:#777;background:#f3f3f3;">Sample Image</div>`;
+            }
+
+            return `                <div class="pdf-element" style="${style}"><img src="${src}" alt="${this.escapeXml(item.imageAlt || 'Image')}" style="width:100%;height:100%;object-fit:${fit};object-position:${position};opacity:${opacity};border-radius:${radius}mm;display:block;"/></div>`;
         }
 
         if (item.type === 'field') {
