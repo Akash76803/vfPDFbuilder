@@ -1,4 +1,5 @@
 import { LightningElement } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 const MM_TO_PX = 96 / 25.4;
 const MIN_SIZE_MM = 2;
@@ -37,6 +38,8 @@ export default class PdfTemplateDesigner extends LightningElement {
     orientation = 'portrait';
     zoomPercent = 90;
     activeBottomTab = 'layers';
+    generatedVfSource = '';
+    vfDownloadHref = '';
 
     showGrid = true;
     snapEnabled = true;
@@ -561,20 +564,46 @@ export default class PdfTemplateDesigner extends LightningElement {
     }
 
     handleGenerateVf() {
-        this.activeBottomTab = 'vf';
+        try {
+            this.generatedVfSource = this.vfPageSource;
+            this.vfDownloadHref = this.buildDownloadHref(this.generatedVfSource);
+            this.activeBottomTab = 'vf';
+            this.showToast('VF generated', 'Current canvas converted to Visualforce source.', 'success');
+        } catch (error) {
+            this.showToast('VF generation failed', this.normalizeError(error), 'error');
+        }
     }
 
     handleExportVf() {
-        const blob = new Blob([this.vfPageSource], { type: 'text/xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'GeneratedPdf.page';
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-        this.activeBottomTab = 'vf';
+        try {
+            this.generatedVfSource = this.vfPageSource;
+            this.vfDownloadHref = this.buildDownloadHref(this.generatedVfSource);
+            this.activeBottomTab = 'vf';
+
+            requestAnimationFrame(() => {
+                const anchor = this.template.querySelector('.vf-download-link');
+                if (anchor) {
+                    anchor.click();
+                    this.showToast('VF exported', 'GeneratedPdf.page download started.', 'success');
+                } else {
+                    this.showToast('Export failed', 'Download link was not available.', 'error');
+                }
+            });
+        } catch (error) {
+            this.showToast('VF export failed', this.normalizeError(error), 'error');
+        }
+    }
+
+    buildDownloadHref(source) {
+        return 'data:text/xml;charset=utf-8,' + encodeURIComponent(source);
+    }
+
+    showToast(title, message, variant) {
+        this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
+    }
+
+    normalizeError(error) {
+        return error?.body?.message || error?.message || String(error || 'Unknown error');
     }
 
     patchSelected(patch) {
