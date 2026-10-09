@@ -1,0 +1,229 @@
+<template>
+    <lightning-card title="PDF Template Designer" icon-name="doctype:pdf">
+        <div class="designer-shell">
+            <aside class="left-panel panel">
+                <div class="panel-section">
+                    <div class="section-title">Elements</div>
+                    <div class="palette-grid">
+                        <template for:each={paletteItems} for:item="item">
+                            <button
+                                key={item.type}
+                                class="palette-item"
+                                data-type={item.type}
+                                onclick={handleAddElement}
+                                title={item.label}>
+                                <lightning-icon icon-name={item.icon} size="x-small"></lightning-icon>
+                                <span>{item.label}</span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="panel-section layers-section">
+                    <div class="section-title row-title">
+                        <span>Layers</span>
+                        <span class="count-badge">{elementCount}</span>
+                    </div>
+                    <template if:true={hasElements}>
+                        <template for:each={layerItems} for:item="item">
+                            <button
+                                key={item.id}
+                                class={item.layerClass}
+                                data-id={item.id}
+                                onclick={handleLayerSelect}>
+                                <span class="layer-type">{item.typeLabel}</span>
+                                <span class="layer-label">{item.label}</span>
+                            </button>
+                        </template>
+                    </template>
+                    <template if:false={hasElements}>
+                        <div class="muted empty-small">No elements yet</div>
+                    </template>
+                </div>
+            </aside>
+
+            <main class="workspace">
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <lightning-button-icon
+                            icon-name="utility:undo"
+                            alternative-text="Undo"
+                            title="Undo"
+                            onclick={handleUndo}
+                            disabled={disableUndo}>
+                        </lightning-button-icon>
+                        <lightning-button-icon
+                            icon-name="utility:redo"
+                            alternative-text="Redo"
+                            title="Redo"
+                            onclick={handleRedo}
+                            disabled={disableRedo}>
+                        </lightning-button-icon>
+                        <lightning-button-icon
+                            icon-name="utility:copy"
+                            alternative-text="Duplicate"
+                            title="Duplicate selected"
+                            onclick={handleDuplicate}
+                            disabled={disableSelectionActions}>
+                        </lightning-button-icon>
+                        <lightning-button-icon
+                            icon-name="utility:delete"
+                            alternative-text="Delete"
+                            title="Delete selected"
+                            onclick={handleDelete}
+                            disabled={disableSelectionActions}>
+                        </lightning-button-icon>
+                    </div>
+
+                    <div class="toolbar-group page-controls">
+                        <lightning-combobox
+                            class="toolbar-combo"
+                            variant="label-hidden"
+                            value={pageSize}
+                            options={pageSizeOptions}
+                            onchange={handlePageSizeChange}>
+                        </lightning-combobox>
+                        <lightning-combobox
+                            class="toolbar-combo"
+                            variant="label-hidden"
+                            value={orientation}
+                            options={orientationOptions}
+                            onchange={handleOrientationChange}>
+                        </lightning-combobox>
+                        <lightning-input
+                            class="zoom-input"
+                            type="number"
+                            variant="label-hidden"
+                            min="50"
+                            max="150"
+                            step="10"
+                            value={zoomPercent}
+                            onchange={handleZoomChange}>
+                        </lightning-input>
+                        <span class="zoom-label">%</span>
+                    </div>
+
+                    <div class="toolbar-group toolbar-right">
+                        <lightning-button label="Save" onclick={handleSave}></lightning-button>
+                        <lightning-button label="Preview PDF" variant="brand" onclick={handlePreview}></lightning-button>
+                    </div>
+                </div>
+
+                <div class="canvas-scroller" onpointermove={handlePointerMove} onpointerup={handlePointerUp} onpointercancel={handlePointerUp}>
+                    <div class="zoom-stage" style={zoomStageStyle}>
+                        <section
+                            class="page"
+                            style={pageStyle}
+                            onclick={handleCanvasClick}
+                            onkeydown={handleCanvasKeydown}
+                            tabindex="0">
+
+                            <div class="page-margin-guide" style={marginGuideStyle}></div>
+
+                            <template if:false={hasElements}>
+                                <div class="empty-state">
+                                    <lightning-icon icon-name="utility:add" size="small"></lightning-icon>
+                                    <div>Add an element from the left panel</div>
+                                </div>
+                            </template>
+
+                            <template for:each={renderElements} for:item="element">
+                                <div
+                                    key={element.id}
+                                    class={element.cssClass}
+                                    style={element.style}
+                                    data-id={element.id}
+                                    onclick={handleElementClick}
+                                    onpointerdown={handleElementPointerDown}>
+
+                                    <div class="element-content">{element.displayText}</div>
+
+                                    <template if:true={element.selected}>
+                                        <span class="resize-handle nw" data-id={element.id} data-handle="nw" onpointerdown={handleResizePointerDown}></span>
+                                        <span class="resize-handle ne" data-id={element.id} data-handle="ne" onpointerdown={handleResizePointerDown}></span>
+                                        <span class="resize-handle sw" data-id={element.id} data-handle="sw" onpointerdown={handleResizePointerDown}></span>
+                                        <span class="resize-handle se" data-id={element.id} data-handle="se" onpointerdown={handleResizePointerDown}></span>
+                                    </template>
+                                </div>
+                            </template>
+                        </section>
+                    </div>
+                </div>
+
+                <div class="bottom-tabs">
+                    <button class={layersTabClass} data-tab="layers" onclick={handleBottomTab}>Layers</button>
+                    <button class={jsonTabClass} data-tab="json" onclick={handleBottomTab}>JSON</button>
+                </div>
+
+                <template if:true={showBottomJson}>
+                    <div class="json-panel"><pre>{templateJson}</pre></div>
+                </template>
+                <template if:true={showBottomLayers}>
+                    <div class="status-panel">
+                        <span>Page: {pageSize} {orientation}</span>
+                        <span>Elements: {elementCount}</span>
+                        <span>Selected: {selectedElementName}</span>
+                    </div>
+                </template>
+            </main>
+
+            <aside class="right-panel panel">
+                <div class="section-title">Properties</div>
+                <template if:true={selectedElement}>
+                    <div class="inspector-scroll">
+                        <div class="inspector-group">
+                            <div class="inspector-heading">General</div>
+                            <lightning-input label="Name" value={selectedElement.label} data-field="label" onchange={handleTextPropertyChange}></lightning-input>
+                            <lightning-input label="Element ID" value={selectedElement.id} disabled></lightning-input>
+                            <lightning-combobox label="Layout Mode" value={selectedElement.layoutMode} options={layoutModeOptions} data-field="layoutMode" onchange={handleSelectPropertyChange}></lightning-combobox>
+                        </div>
+
+                        <div class="inspector-group">
+                            <div class="inspector-heading">Position & Size (mm)</div>
+                            <div class="field-grid two-col">
+                                <lightning-input type="number" label="X" value={selectedElement.x} step="0.5" data-field="x" onchange={handleNumberPropertyChange}></lightning-input>
+                                <lightning-input type="number" label="Y" value={selectedElement.y} step="0.5" data-field="y" onchange={handleNumberPropertyChange}></lightning-input>
+                                <lightning-input type="number" label="Width" value={selectedElement.width} min="2" step="0.5" data-field="width" onchange={handleNumberPropertyChange}></lightning-input>
+                                <lightning-input type="number" label="Height" value={selectedElement.height} min="2" step="0.5" data-field="height" onchange={handleNumberPropertyChange}></lightning-input>
+                            </div>
+                        </div>
+
+                        <template if:true={selectedSupportsText}>
+                            <div class="inspector-group">
+                                <div class="inspector-heading">Content</div>
+                                <lightning-textarea label="Text / Binding" value={selectedElement.value} data-field="value" onchange={handleTextPropertyChange}></lightning-textarea>
+                            </div>
+
+                            <div class="inspector-group">
+                                <div class="inspector-heading">Typography</div>
+                                <div class="field-grid two-col">
+                                    <lightning-input type="number" label="Font Size" value={selectedElement.fontSize} min="6" max="72" data-field="fontSize" onchange={handleNumberPropertyChange}></lightning-input>
+                                    <lightning-combobox label="Alignment" value={selectedElement.textAlign} options={textAlignOptions} data-field="textAlign" onchange={handleSelectPropertyChange}></lightning-combobox>
+                                </div>
+                                <div class="toggle-row">
+                                    <lightning-input type="checkbox" label="Bold" checked={selectedElement.bold} data-field="bold" onchange={handleBooleanPropertyChange}></lightning-input>
+                                    <lightning-input type="checkbox" label="Italic" checked={selectedElement.italic} data-field="italic" onchange={handleBooleanPropertyChange}></lightning-input>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div class="inspector-group">
+                            <div class="inspector-heading">Actions</div>
+                            <div class="action-row">
+                                <lightning-button label="Duplicate" onclick={handleDuplicate}></lightning-button>
+                                <lightning-button label="Delete" variant="destructive-text" onclick={handleDelete}></lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template if:false={selectedElement}>
+                    <div class="no-selection">
+                        <lightning-icon icon-name="utility:touch_action" size="small"></lightning-icon>
+                        <p>Select an element on the canvas or from Layers.</p>
+                    </div>
+                </template>
+            </aside>
+        </div>
+    </lightning-card>
+</template>

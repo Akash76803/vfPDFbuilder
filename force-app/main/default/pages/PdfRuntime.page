@@ -1,0 +1,25 @@
+<apex:page
+    controller="PdfRuntimeController"
+    renderAs="pdf"
+    showHeader="false"
+    sidebar="false"
+    applyHtmlTag="false"
+    applyBodyTag="false">
+    <html>
+        <head>
+            <style type="text/css">
+                @page {
+                    size: A4 portrait;
+                    margin: 15mm;
+                }
+                body {
+                    font-family: sans-serif;
+                    font-size: 10pt;
+                }
+            </style>
+        </head>
+        <body>
+            <apex:outputText value="{!generatedHtml}" escape="false"/>
+        </body>
+    </html>
+</apex:page>

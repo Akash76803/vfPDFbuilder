@@ -1,0 +1,9 @@
+{
+  "name": "salesforce-vf-pdf-designer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Tests will be added in Phase 1\"",
+    "lint": "echo \"Lint configuration pending\""
+  }
+}
