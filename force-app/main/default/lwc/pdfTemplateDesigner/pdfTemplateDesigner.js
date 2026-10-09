@@ -60,15 +60,6 @@ export default class PdfTemplateDesigner extends LightningElement {
         ];
     }
 
-    get layoutModeOptions() {
-        return [
-            { label: 'Absolute', value: 'absolute' },
-            { label: 'Flow', value: 'flow' },
-            { label: 'Fixed Header', value: 'fixedHeader' },
-            { label: 'Fixed Footer', value: 'fixedFooter' }
-        ];
-    }
-
     get textAlignOptions() {
         return [
             { label: 'Left', value: 'left' },
@@ -209,7 +200,7 @@ export default class PdfTemplateDesigner extends LightningElement {
             id,
             type,
             label: palette.label,
-            layoutMode: 'absolute',
+            position: 'absolute',
             x: 20 + offset,
             y: 20 + offset,
             width: defaults.width,
@@ -259,7 +250,7 @@ export default class PdfTemplateDesigner extends LightningElement {
         const id = event.currentTarget.dataset.id;
         this.selectedElementId = id;
         const element = this.elements.find((item) => item.id === id);
-        if (!element || element.layoutMode !== 'absolute') {
+        if (!element) {
             return;
         }
         this.interaction = {
