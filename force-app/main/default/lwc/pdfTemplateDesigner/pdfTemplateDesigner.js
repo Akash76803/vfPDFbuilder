@@ -26,7 +26,7 @@ const DEFAULTS = {
     image: { width: 35, height: 25, value: 'Image', fontSize: 10 },
     line: { width: 70, height: 2, value: '', fontSize: 10 },
     rectangle: { width: 55, height: 25, value: '', fontSize: 10 },
-    table: { width: 150, height: 45, value: 'Dynamic Table', fontSize: 10 },
+    table: { width: 170, height: 55, value: 'Dynamic Table', fontSize: 9 },
     section: { width: 170, height: 30, value: 'Section', fontSize: 10 }
 };
 
@@ -131,7 +131,18 @@ export default class PdfTemplateDesigner extends LightningElement {
     }
 
     get selectedSupportsText() {
-        return ['text', 'field', 'table', 'section'].includes(this.selectedElement?.type);
+        return ['text', 'field', 'section'].includes(this.selectedElement?.type);
+    }
+
+    get selectedIsTable() {
+        return this.selectedElement?.type === 'table';
+    }
+
+    get selectedTableColumns() {
+        return (this.selectedElement?.tableColumns || []).map((column, index) => ({
+            ...column,
+            orderLabel: `Column ${index + 1}`
+        }));
     }
 
     get disableSelectionActions() {
@@ -161,7 +172,8 @@ export default class PdfTemplateDesigner extends LightningElement {
     get renderElements() {
         return this.elements.map((item, index) => {
             const selected = item.id === this.selectedElementId;
-            const displayText = item.type === 'line' || item.type === 'rectangle' ? '' : item.value || item.label;
+            const isTable = item.type === 'table';
+            const displayText = item.type === 'line' || item.type === 'rectangle' || isTable ? '' : item.value || item.label;
             const fontWeight = item.bold ? '700' : '400';
             const fontStyle = item.italic ? 'italic' : 'normal';
             const effectiveBorderWidth = item.type === 'line' ? Math.max(item.borderWidth || 1, 1) : item.borderWidth || 0;
@@ -170,10 +182,31 @@ export default class PdfTemplateDesigner extends LightningElement {
                 ? `border-top:${effectiveBorderWidth}px ${effectiveBorderStyle} ${item.borderColor};height:0;`
                 : '';
 
+            const tableColumns = (item.tableColumns || []).map((column) => ({
+                ...column,
+                cellStyle: `width:${column.width}%;text-align:${column.align || 'left'};padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;`
+            }));
+            const previewRows = isTable
+                ? Array.from({ length: item.tablePreviewRows || 3 }, (_, rowIndex) => ({
+                    key: `row-${rowIndex}`,
+                    cells: tableColumns.map((column, columnIndex) => ({
+                        key: `row-${rowIndex}-cell-${column.id}`,
+                        value: rowIndex === 0 ? this.previewValueForColumn(column, columnIndex) : ' ',
+                        cellStyle: column.cellStyle
+                    }))
+                }))
+                : [];
+
             return {
                 ...item,
                 selected,
+                isTable,
                 displayText,
+                tableColumns,
+                previewRows,
+                tableShowHeader: item.tableShowHeader !== false,
+                headerStyle: `height:${(item.tableHeaderHeight || 7) * MM_TO_PX}px;background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};`,
+                rowStyle: `height:${(item.tableRowHeight || 7) * MM_TO_PX}px;`,
                 cssClass: selected ? `canvas-element type-${item.type} selected` : `canvas-element type-${item.type}`,
                 style:
                     `left:${item.x * MM_TO_PX}px;top:${item.y * MM_TO_PX}px;` +
@@ -285,7 +318,24 @@ export default class PdfTemplateDesigner extends LightningElement {
             borderColor: '#444444',
             borderWidth: type === 'rectangle' || type === 'table' || type === 'section' ? 1 : 0,
             borderStyle: type === 'line' || type === 'rectangle' || type === 'table' || type === 'section' ? 'solid' : 'none',
-            padding: type === 'text' || type === 'field' ? 1 : 0
+            padding: type === 'text' || type === 'field' ? 1 : 0,
+            ...(type === 'table' ? {
+                tableDataSource: '{{items}}',
+                tablePreviewRows: 3,
+                tableRowHeight: 7,
+                tableHeaderHeight: 7,
+                tableCellPadding: 1,
+                tableShowHeader: true,
+                tableRepeatHeader: true,
+                tableHeaderBackground: '#f3f3f3',
+                tableHeaderTextColor: '#181818',
+                tableColumns: [
+                    { id: 'col-description', label: 'Description', binding: '{{row.Description}}', width: 45, align: 'left' },
+                    { id: 'col-qty', label: 'Qty', binding: '{{row.Quantity}}', width: 15, align: 'right' },
+                    { id: 'col-rate', label: 'Rate', binding: '{{row.Rate}}', width: 20, align: 'right' },
+                    { id: 'col-amount', label: 'Amount', binding: '{{row.Amount}}', width: 20, align: 'right' }
+                ]
+            } : {})
         };
 
         this.elements = [...this.elements, element];
@@ -458,6 +508,92 @@ export default class PdfTemplateDesigner extends LightningElement {
 
     handleTextPropertyChange(event) {
         this.patchSelected({ [event.currentTarget.dataset.field]: event.target.value });
+    }
+
+    handleTablePropertyChange(event) {
+        this.patchSelected({ [event.currentTarget.dataset.tableField]: event.target.value });
+    }
+
+    handleTableNumberPropertyChange(event) {
+        const field = event.currentTarget.dataset.tableField;
+        const value = Number(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.patchSelected({ [field]: value });
+    }
+
+    handleTableBooleanPropertyChange(event) {
+        this.patchSelected({ [event.currentTarget.dataset.tableField]: event.target.checked });
+    }
+
+    handleAddTableColumn() {
+        const table = this.selectedElement;
+        if (!table || table.type !== 'table') return;
+        const nextIndex = (table.tableColumns || []).length + 1;
+        const id = `col-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const columns = [
+            ...(table.tableColumns || []),
+            { id, label: `Column ${nextIndex}`, binding: `{{row.Field${nextIndex}}}`, width: 20, align: 'left' }
+        ];
+        this.patchSelected({ tableColumns: this.normalizeTableWidths(columns) });
+    }
+
+    handleRemoveTableColumn(event) {
+        const table = this.selectedElement;
+        if (!table || table.type !== 'table') return;
+        const id = event.currentTarget.dataset.columnId;
+        const columns = (table.tableColumns || []).filter((column) => column.id !== id);
+        if (!columns.length) {
+            this.showToast('Column required', 'Dynamic table must contain at least one column.', 'warning');
+            return;
+        }
+        this.patchSelected({ tableColumns: this.normalizeTableWidths(columns) });
+    }
+
+    handleTableColumnChange(event) {
+        this.patchTableColumn(
+            event.currentTarget.dataset.columnId,
+            { [event.currentTarget.dataset.columnField]: event.target.value }
+        );
+    }
+
+    handleTableColumnNumberChange(event) {
+        const value = Number(event.target.value);
+        if (!Number.isFinite(value)) return;
+        this.patchTableColumn(
+            event.currentTarget.dataset.columnId,
+            { [event.currentTarget.dataset.columnField]: Math.max(5, value) },
+            true
+        );
+    }
+
+    handleTableColumnSelectChange(event) {
+        this.patchTableColumn(
+            event.currentTarget.dataset.columnId,
+            { [event.currentTarget.dataset.columnField]: event.detail.value }
+        );
+    }
+
+    patchTableColumn(id, patch, normalizeWidths = false) {
+        const table = this.selectedElement;
+        if (!table || table.type !== 'table') return;
+        let columns = (table.tableColumns || []).map((column) =>
+            column.id === id ? { ...column, ...patch } : column
+        );
+        if (normalizeWidths) columns = this.normalizeTableWidths(columns);
+        this.patchSelected({ tableColumns: columns });
+    }
+
+    normalizeTableWidths(columns) {
+        const total = columns.reduce((sum, column) => sum + Math.max(1, Number(column.width) || 0), 0) || 1;
+        return columns.map((column) => ({
+            ...column,
+            width: Math.round((Math.max(1, Number(column.width) || 0) / total) * 1000) / 10
+        }));
+    }
+
+    previewValueForColumn(column, index) {
+        const samples = ['Product / Service', '2', '1,250.00', '2,500.00'];
+        return samples[index] || column.label;
     }
 
     handleSelectPropertyChange(event) {
@@ -703,15 +839,50 @@ export default class PdfTemplateDesigner extends LightningElement {
         }
 
         if (item.type === 'table') {
-            return [
-                `                <div class="pdf-element" style="${style}">`,
-                '                    <!-- Dynamic table placeholder. Configure its data source before runtime rendering. -->',
-                `                    ${this.toVfBinding(item.value || 'Dynamic Table')}`,
-                '                </div>'
-            ].join('\n');
+            return this.toVfTable(item, style);
         }
 
         return `                <div class="pdf-element" style="${style}">${this.toVfBinding(item.value || '')}</div>`;
+    }
+
+    toVfTable(item, style) {
+        const columns = item.tableColumns || [];
+        const sourceExpression = this.toVfExpression(item.tableDataSource || '{{items}}');
+        const header = item.tableShowHeader === false
+            ? ''
+            : [
+                '                        <thead>',
+                '                            <tr>',
+                ...columns.map((column) =>
+                    `                                <th style="width:${column.width}%;text-align:${column.align || 'left'};background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};padding:${item.tableCellPadding || 1}mm;border:1px solid ${item.borderColor || '#444444'};">${this.escapeXml(column.label)}</th>`
+                ),
+                '                            </tr>',
+                '                        </thead>'
+            ].join('\n');
+
+        const cells = columns.map((column) =>
+            `                                <td style="width:${column.width}%;text-align:${column.align || 'left'};padding:${item.tableCellPadding || 1}mm;border:1px solid ${item.borderColor || '#444444'};">${this.toVfBinding(column.binding)}</td>`
+        ).join('\n');
+
+        return [
+            `                <div class="pdf-element" style="${style}">`,
+            '                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">',
+            header,
+            '                        <tbody>',
+            `                            <apex:repeat value="${sourceExpression}" var="row">`,
+            '                            <tr>',
+            cells,
+            '                            </tr>',
+            '                            </apex:repeat>',
+            '                        </tbody>',
+            '                    </table>',
+            '                </div>'
+        ].filter(Boolean).join('\n');
+    }
+
+    toVfExpression(value) {
+        const match = String(value || '').match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+        return match ? `{!${match[1]}}` : value;
     }
 
     toVfBinding(value) {
