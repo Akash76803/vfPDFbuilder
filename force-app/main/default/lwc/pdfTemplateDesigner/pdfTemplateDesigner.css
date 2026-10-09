@@ -229,14 +229,45 @@
     border: 1px dashed #aaa;
 }
 
-.type-table .element-content {
-    background: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 18px,
-        rgba(0,0,0,.08) 19px
-    );
+.type-table {
+    padding: 0;
+    overflow: hidden;
+}
+
+.table-preview {
+    width: 100%;
     height: 100%;
+    overflow: hidden;
+    background: #fff;
+    font-size: 10px;
+}
+
+.table-preview-row {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.table-preview-header {
+    font-weight: 700;
+}
+
+.table-preview-cell {
+    min-width: 0;
+    box-sizing: border-box;
+    border-right: 1px solid #777;
+    border-bottom: 1px solid #777;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.table-preview-cell:first-child {
+    border-left: 1px solid #777;
+}
+
+.table-preview-header .table-preview-cell {
+    border-top: 1px solid #777;
 }
 
 .type-image .element-content {
@@ -449,4 +480,50 @@
 
 .vf-download-link {
     display: none;
+}
+
+
+.table-designer .row-title {
+    margin-bottom: .6rem;
+}
+
+.table-settings-grid {
+    margin-top: .5rem;
+}
+
+.table-column-list {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-top: .75rem;
+}
+
+.table-column-card {
+    border: 1px solid #ddd;
+    border-radius: .4rem;
+    padding: .55rem;
+    background: #fafafa;
+}
+
+.table-column-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+}
+
+.icon-text-button {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.icon-text-button:hover {
+    background: #f3f3f3;
 }
