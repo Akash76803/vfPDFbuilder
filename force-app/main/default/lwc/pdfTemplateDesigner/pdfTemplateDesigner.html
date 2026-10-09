@@ -109,7 +109,14 @@
                                         </div>
                                     </template>
                                     <template if:false={element.isTable}>
-                                        <div class="element-content">{element.displayText}</div>
+                                        <template if:true={element.isImage}>
+                                            <div class="image-preview-frame" style={element.imageFrameStyle}>
+                                                <img class="image-preview" src={element.imageSrc} alt={element.imageAlt} style={element.imageStyle}/>
+                                            </div>
+                                        </template>
+                                        <template if:false={element.isImage}>
+                                            <div class="element-content">{element.displayText}</div>
+                                        </template>
                                     </template>
                                     <template if:true={element.selected}>
                                         <span class="resize-handle nw" data-id={element.id} data-handle="nw" onpointerdown={handleResizePointerDown}></span>
@@ -172,6 +179,84 @@
                                 <lightning-input type="number" label="Height" value={selectedElement.height} min="2" step="0.5" data-field="height" onchange={handleNumberPropertyChange}></lightning-input>
                             </div>
                         </div>
+
+                        <template if:true={selectedIsImage}>
+                            <div class="inspector-group image-designer">
+                                <div class="inspector-heading">Image</div>
+
+                                <lightning-input
+                                    label="Image URL / Static Resource URL"
+                                    value={selectedElement.imageSrc}
+                                    data-image-field="imageSrc"
+                                    onchange={handleImagePropertyChange}>
+                                </lightning-input>
+
+                                <lightning-input
+                                    label="Alt Text"
+                                    value={selectedElement.imageAlt}
+                                    data-image-field="imageAlt"
+                                    onchange={handleImagePropertyChange}>
+                                </lightning-input>
+
+                                <div class="field-grid two-col">
+                                    <lightning-combobox
+                                        label="Fit"
+                                        value={selectedElement.imageFit}
+                                        options={imageFitOptions}
+                                        data-image-field="imageFit"
+                                        onchange={handleImageSelectPropertyChange}>
+                                    </lightning-combobox>
+
+                                    <lightning-input
+                                        type="number"
+                                        label="Opacity %"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={selectedElement.imageOpacity}
+                                        data-image-field="imageOpacity"
+                                        onchange={handleImageNumberPropertyChange}>
+                                    </lightning-input>
+
+                                    <lightning-input
+                                        type="number"
+                                        label="Border Radius (mm)"
+                                        min="0"
+                                        max="50"
+                                        step="0.5"
+                                        value={selectedElement.imageBorderRadius}
+                                        data-image-field="imageBorderRadius"
+                                        onchange={handleImageNumberPropertyChange}>
+                                    </lightning-input>
+
+                                    <lightning-combobox
+                                        label="Horizontal Position"
+                                        value={selectedElement.imagePositionX}
+                                        options={imagePositionXOptions}
+                                        data-image-field="imagePositionX"
+                                        onchange={handleImageSelectPropertyChange}>
+                                    </lightning-combobox>
+
+                                    <lightning-combobox
+                                        label="Vertical Position"
+                                        value={selectedElement.imagePositionY}
+                                        options={imagePositionYOptions}
+                                        data-image-field="imagePositionY"
+                                        onchange={handleImageSelectPropertyChange}>
+                                    </lightning-combobox>
+                                </div>
+
+                                <div class="toggle-row">
+                                    <lightning-input
+                                        type="checkbox"
+                                        label="Use Sample Image"
+                                        checked={selectedElement.useSampleImage}
+                                        data-image-field="useSampleImage"
+                                        onchange={handleImageBooleanPropertyChange}>
+                                    </lightning-input>
+                                </div>
+                            </div>
+                        </template>
 
                         <template if:true={selectedIsTable}>
                             <div class="inspector-group table-designer">
