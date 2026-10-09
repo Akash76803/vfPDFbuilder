@@ -6,12 +6,7 @@
                     <div class="section-title">Elements</div>
                     <div class="palette-grid">
                         <template for:each={paletteItems} for:item="item">
-                            <button
-                                key={item.type}
-                                class="palette-item"
-                                data-type={item.type}
-                                onclick={handleAddElement}
-                                title={item.label}>
+                            <button key={item.type} class="palette-item" data-type={item.type} onclick={handleAddElement} title={item.label}>
                                 <lightning-icon icon-name={item.icon} size="x-small"></lightning-icon>
                                 <span>{item.label}</span>
                             </button>
@@ -26,11 +21,7 @@
                     </div>
                     <template if:true={hasElements}>
                         <template for:each={layerItems} for:item="item">
-                            <button
-                                key={item.id}
-                                class={item.layerClass}
-                                data-id={item.id}
-                                onclick={handleLayerSelect}>
+                            <button key={item.id} class={item.layerClass} data-id={item.id} onclick={handleLayerSelect}>
                                 <span class="layer-type">{item.typeLabel}</span>
                                 <span class="layer-label">{item.label}</span>
                             </button>
@@ -45,62 +36,36 @@
             <main class="workspace">
                 <div class="toolbar">
                     <div class="toolbar-group">
-                        <lightning-button-icon
-                            icon-name="utility:undo"
-                            alternative-text="Undo"
-                            title="Undo"
-                            onclick={handleUndo}
-                            disabled={disableUndo}>
-                        </lightning-button-icon>
-                        <lightning-button-icon
-                            icon-name="utility:redo"
-                            alternative-text="Redo"
-                            title="Redo"
-                            onclick={handleRedo}
-                            disabled={disableRedo}>
-                        </lightning-button-icon>
-                        <lightning-button-icon
-                            icon-name="utility:copy"
-                            alternative-text="Duplicate"
-                            title="Duplicate selected"
-                            onclick={handleDuplicate}
-                            disabled={disableSelectionActions}>
-                        </lightning-button-icon>
-                        <lightning-button-icon
-                            icon-name="utility:delete"
-                            alternative-text="Delete"
-                            title="Delete selected"
-                            onclick={handleDelete}
-                            disabled={disableSelectionActions}>
-                        </lightning-button-icon>
+                        <lightning-button-icon icon-name="utility:undo" alternative-text="Undo" title="Undo" onclick={handleUndo} disabled={disableUndo}></lightning-button-icon>
+                        <lightning-button-icon icon-name="utility:redo" alternative-text="Redo" title="Redo" onclick={handleRedo} disabled={disableRedo}></lightning-button-icon>
+                        <lightning-button-icon icon-name="utility:copy" alternative-text="Duplicate" title="Duplicate selected" onclick={handleDuplicate} disabled={disableSelectionActions}></lightning-button-icon>
+                        <lightning-button-icon icon-name="utility:delete" alternative-text="Delete" title="Delete selected" onclick={handleDelete} disabled={disableSelectionActions}></lightning-button-icon>
                     </div>
 
+                    <div class="toolbar-divider"></div>
+
+                    <div class="toolbar-group alignment-tools">
+                        <button class="mini-tool" data-align="left" onclick={handleAlign} disabled={disableSelectionActions} title="Align left to page">L</button>
+                        <button class="mini-tool" data-align="center" onclick={handleAlign} disabled={disableSelectionActions} title="Center horizontally">C</button>
+                        <button class="mini-tool" data-align="right" onclick={handleAlign} disabled={disableSelectionActions} title="Align right to page">R</button>
+                        <button class="mini-tool" data-align="top" onclick={handleAlign} disabled={disableSelectionActions} title="Align top to page">T</button>
+                        <button class="mini-tool" data-align="middle" onclick={handleAlign} disabled={disableSelectionActions} title="Center vertically">M</button>
+                        <button class="mini-tool" data-align="bottom" onclick={handleAlign} disabled={disableSelectionActions} title="Align bottom to page">B</button>
+                    </div>
+
+                    <div class="toolbar-divider"></div>
+
                     <div class="toolbar-group page-controls">
-                        <lightning-combobox
-                            class="toolbar-combo"
-                            variant="label-hidden"
-                            value={pageSize}
-                            options={pageSizeOptions}
-                            onchange={handlePageSizeChange}>
-                        </lightning-combobox>
-                        <lightning-combobox
-                            class="toolbar-combo"
-                            variant="label-hidden"
-                            value={orientation}
-                            options={orientationOptions}
-                            onchange={handleOrientationChange}>
-                        </lightning-combobox>
-                        <lightning-input
-                            class="zoom-input"
-                            type="number"
-                            variant="label-hidden"
-                            min="50"
-                            max="150"
-                            step="10"
-                            value={zoomPercent}
-                            onchange={handleZoomChange}>
-                        </lightning-input>
+                        <lightning-combobox class="toolbar-combo" variant="label-hidden" value={pageSize} options={pageSizeOptions} onchange={handlePageSizeChange}></lightning-combobox>
+                        <lightning-combobox class="toolbar-combo" variant="label-hidden" value={orientation} options={orientationOptions} onchange={handleOrientationChange}></lightning-combobox>
+                        <lightning-input class="zoom-input" type="number" variant="label-hidden" min="50" max="150" step="10" value={zoomPercent} onchange={handleZoomChange}></lightning-input>
                         <span class="zoom-label">%</span>
+                    </div>
+
+                    <div class="toolbar-group grid-controls">
+                        <lightning-input type="checkbox" label="Grid" checked={showGrid} onchange={handleGridToggle}></lightning-input>
+                        <lightning-input type="checkbox" label="Snap" checked={snapEnabled} onchange={handleSnapToggle}></lightning-input>
+                        <lightning-input class="grid-size-input" type="number" label="Grid mm" min="1" max="20" step="1" value={gridSizeMm} onchange={handleGridSizeChange}></lightning-input>
                     </div>
 
                     <div class="toolbar-group toolbar-right">
@@ -111,13 +76,7 @@
 
                 <div class="canvas-scroller" onpointermove={handlePointerMove} onpointerup={handlePointerUp} onpointercancel={handlePointerUp}>
                     <div class="zoom-stage" style={zoomStageStyle}>
-                        <section
-                            class="page"
-                            style={pageStyle}
-                            onclick={handleCanvasClick}
-                            onkeydown={handleCanvasKeydown}
-                            tabindex="0">
-
+                        <section class={pageClass} style={pageStyle} onclick={handleCanvasClick} onkeydown={handleCanvasKeydown} tabindex="0">
                             <div class="page-margin-guide" style={marginGuideStyle}></div>
 
                             <template if:false={hasElements}>
@@ -128,16 +87,9 @@
                             </template>
 
                             <template for:each={renderElements} for:item="element">
-                                <div
-                                    key={element.id}
-                                    class={element.cssClass}
-                                    style={element.style}
-                                    data-id={element.id}
-                                    onclick={handleElementClick}
-                                    onpointerdown={handleElementPointerDown}>
-
+                                <div key={element.id} class={element.cssClass} style={element.style} data-id={element.id}
+                                    onclick={handleElementClick} onpointerdown={handleElementPointerDown}>
                                     <div class="element-content">{element.displayText}</div>
-
                                     <template if:true={element.selected}>
                                         <span class="resize-handle nw" data-id={element.id} data-handle="nw" onpointerdown={handleResizePointerDown}></span>
                                         <span class="resize-handle ne" data-id={element.id} data-handle="ne" onpointerdown={handleResizePointerDown}></span>
@@ -163,6 +115,8 @@
                         <span>Page: {pageSize} {orientation}</span>
                         <span>Elements: {elementCount}</span>
                         <span>Selected: {selectedElementName}</span>
+                        <span>Grid: {gridSizeMm}mm</span>
+                        <span>Snap: {snapStatus}</span>
                     </div>
                 </template>
             </main>
@@ -198,6 +152,8 @@
                                 <div class="field-grid two-col">
                                     <lightning-input type="number" label="Font Size" value={selectedElement.fontSize} min="6" max="72" data-field="fontSize" onchange={handleNumberPropertyChange}></lightning-input>
                                     <lightning-combobox label="Alignment" value={selectedElement.textAlign} options={textAlignOptions} data-field="textAlign" onchange={handleSelectPropertyChange}></lightning-combobox>
+                                    <lightning-input type="color" label="Text Color" value={selectedElement.textColor} data-field="textColor" onchange={handleTextPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Padding (mm)" value={selectedElement.padding} min="0" max="20" step="0.5" data-field="padding" onchange={handleNumberPropertyChange}></lightning-input>
                                 </div>
                                 <div class="toggle-row">
                                     <lightning-input type="checkbox" label="Bold" checked={selectedElement.bold} data-field="bold" onchange={handleBooleanPropertyChange}></lightning-input>
@@ -205,6 +161,26 @@
                                 </div>
                             </div>
                         </template>
+
+                        <div class="inspector-group">
+                            <div class="inspector-heading">Box Style</div>
+                            <div class="field-grid two-col">
+                                <lightning-input type="color" label="Background" value={selectedElement.backgroundColor} data-field="backgroundColor" onchange={handleTextPropertyChange}></lightning-input>
+                                <lightning-input type="color" label="Border Color" value={selectedElement.borderColor} data-field="borderColor" onchange={handleTextPropertyChange}></lightning-input>
+                                <lightning-input type="number" label="Border Width" value={selectedElement.borderWidth} min="0" max="10" step="0.5" data-field="borderWidth" onchange={handleNumberPropertyChange}></lightning-input>
+                                <lightning-combobox label="Border Style" value={selectedElement.borderStyle} options={borderStyleOptions} data-field="borderStyle" onchange={handleSelectPropertyChange}></lightning-combobox>
+                            </div>
+                        </div>
+
+                        <div class="inspector-group">
+                            <div class="inspector-heading">Layer Order</div>
+                            <div class="layer-actions">
+                                <lightning-button label="Front" data-layer-action="front" onclick={handleLayerOrder}></lightning-button>
+                                <lightning-button label="Forward" data-layer-action="forward" onclick={handleLayerOrder}></lightning-button>
+                                <lightning-button label="Backward" data-layer-action="backward" onclick={handleLayerOrder}></lightning-button>
+                                <lightning-button label="Back" data-layer-action="back" onclick={handleLayerOrder}></lightning-button>
+                            </div>
+                        </div>
 
                         <div class="inspector-group">
                             <div class="inspector-heading">Actions</div>
