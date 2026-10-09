@@ -53,3 +53,15 @@ All designer elements are absolute positioned.
 ### Dynamic table rule
 
 A dynamic table also has an absolute starting X/Y position. Row growth, repeated headers, overflow, and continuation onto following pages are handled by the table pagination engine rather than introducing a second layout mode.
+
+
+## Visualforce source generation
+
+The designer can generate a standalone Visualforce `.page` source from the current canvas.
+
+- Every canvas element is emitted with absolute positioning in millimeters.
+- Static text is XML escaped.
+- Builder bindings such as `{{record.Name}}` are converted to Visualforce expressions such as `{!record.Name}`.
+- Shapes and lines are emitted as VF-safe HTML/CSS.
+- Image elements are emitted through `<apex:image>`.
+- Dynamic tables currently generate a placeholder; their real iteration/data source binding is handled in the table-runtime phase.
