@@ -445,3 +445,8 @@
     font-size: .78rem;
     font-weight: 700;
 }
+
+
+.vf-download-link {
+    display: none;
+}
