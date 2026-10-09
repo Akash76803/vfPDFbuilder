@@ -221,6 +221,41 @@ export default class PdfTemplateDesigner extends LightningElement {
         return this.activeBottomTab === 'layers' ? 'bottom-tab active' : 'bottom-tab';
     }
 
+    get showBottomVf() {
+        return this.activeBottomTab === 'vf';
+    }
+
+    get vfTabClass() {
+        return this.activeBottomTab === 'vf' ? 'bottom-tab active' : 'bottom-tab';
+    }
+
+    get vfPageSource() {
+        const page = this.pageDimensions;
+        const pageSizeCss = this.pageSize === 'LETTER' ? 'letter' : 'A4';
+        const orientationCss = this.orientation === 'landscape' ? 'landscape' : 'portrait';
+        const body = this.elements.map((item, index) => this.toVfElement(item, index)).join('\n');
+
+        return [
+            '<apex:page renderAs="pdf" showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false">',
+            '    <html>',
+            '        <head>',
+            '            <style type="text/css">',
+            `                @page { size: ${pageSizeCss} ${orientationCss}; margin: 0; }`,
+            '                html, body { margin:0; padding:0; }',
+            `                .pdf-page { position:relative; width:${page.width}mm; height:${page.height}mm; overflow:hidden; font-family:Arial, Helvetica, sans-serif; }`,
+            '                .pdf-element { box-sizing:border-box; }',
+            '            </style>',
+            '        </head>',
+            '        <body>',
+            '            <div class="pdf-page">',
+            body,
+            '            </div>',
+            '        </body>',
+            '    </html>',
+            '</apex:page>'
+        ].join('\n');
+    }
+
     handleAddElement(event) {
         const type = event.currentTarget.dataset.type;
         const palette = PALETTE.find((item) => item.type === type);
@@ -525,10 +560,21 @@ export default class PdfTemplateDesigner extends LightningElement {
         console.log('Template JSON', this.templateJson);
     }
 
-    handlePreview() {
-        // Phase 5: invoke runtime preview and open generated PDF.
-        // eslint-disable-next-line no-console
-        console.log('Preview payload', this.templateModel);
+    handleGenerateVf() {
+        this.activeBottomTab = 'vf';
+    }
+
+    handleExportVf() {
+        const blob = new Blob([this.vfPageSource], { type: 'text/xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'GeneratedPdf.page';
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        this.activeBottomTab = 'vf';
     }
 
     patchSelected(patch) {
@@ -586,6 +632,75 @@ export default class PdfTemplateDesigner extends LightningElement {
         if (!this.elements.some((item) => item.id === this.selectedElementId)) {
             this.selectedElementId = undefined;
         }
+    }
+
+    toVfElement(item, index) {
+        const zIndex = index + 2;
+        const style = [
+            'position:absolute',
+            `left:${item.x}mm`,
+            `top:${item.y}mm`,
+            `width:${item.width}mm`,
+            `height:${item.height}mm`,
+            `z-index:${zIndex}`,
+            `font-size:${item.fontSize || 10}pt`,
+            `font-weight:${item.bold ? 'bold' : 'normal'}`,
+            `font-style:${item.italic ? 'italic' : 'normal'}`,
+            `text-align:${item.textAlign || 'left'}`,
+            `color:${item.textColor || '#181818'}`,
+            `background-color:${item.backgroundColor || 'transparent'}`,
+            `padding:${item.padding || 0}mm`,
+            `border:${item.borderWidth || 0}px ${item.borderStyle || 'none'} ${item.borderColor || '#000000'}`,
+            'overflow:hidden'
+        ].join(';');
+
+        if (item.type === 'line') {
+            const lineWidth = Math.max(item.borderWidth || 1, 1);
+            const lineStyle = item.borderStyle === 'none' ? 'solid' : (item.borderStyle || 'solid');
+            return `                <div class="pdf-element" style="position:absolute;left:${item.x}mm;top:${item.y}mm;width:${item.width}mm;z-index:${zIndex};border-top:${lineWidth}px ${lineStyle} ${item.borderColor || '#000000'};"></div>`;
+        }
+
+        if (item.type === 'rectangle') {
+            return `                <div class="pdf-element" style="${style}"></div>`;
+        }
+
+        if (item.type === 'image') {
+            const src = this.escapeXml(item.value || '');
+            return `                <div class="pdf-element" style="${style}"><apex:image url="${src}" width="100%" height="100%"/></div>`;
+        }
+
+        if (item.type === 'field') {
+            return `                <div class="pdf-element" style="${style}">${this.toVfBinding(item.value)}</div>`;
+        }
+
+        if (item.type === 'table') {
+            return [
+                `                <div class="pdf-element" style="${style}">`,
+                '                    <!-- Dynamic table placeholder. Configure its data source before runtime rendering. -->',
+                `                    ${this.toVfBinding(item.value || 'Dynamic Table')}`,
+                '                </div>'
+            ].join('\n');
+        }
+
+        return `                <div class="pdf-element" style="${style}">${this.toVfBinding(item.value || '')}</div>`;
+    }
+
+    toVfBinding(value) {
+        const source = String(value || '');
+        const parts = source.split(/(\{\{[^}]+\}\})/g);
+        return parts.map((part) => {
+            const match = part.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+            return match ? `{!${match[1]}}` : this.escapeXml(part);
+        }).join('');
+    }
+
+    escapeXml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     snapValue(value) {
