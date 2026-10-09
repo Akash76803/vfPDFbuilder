@@ -90,7 +90,27 @@
                             <template for:each={renderElements} for:item="element">
                                 <div key={element.id} class={element.cssClass} style={element.style} data-id={element.id}
                                     onclick={handleElementClick} onpointerdown={handleElementPointerDown}>
-                                    <div class="element-content">{element.displayText}</div>
+                                    <template if:true={element.isTable}>
+                                        <div class="table-preview">
+                                            <template if:true={element.tableShowHeader}>
+                                                <div class="table-preview-row table-preview-header" style={element.headerStyle}>
+                                                    <template for:each={element.tableColumns} for:item="column">
+                                                        <div key={column.id} class="table-preview-cell" style={column.cellStyle}>{column.label}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <template for:each={element.previewRows} for:item="row">
+                                                <div key={row.key} class="table-preview-row" style={element.rowStyle}>
+                                                    <template for:each={row.cells} for:item="cell">
+                                                        <div key={cell.key} class="table-preview-cell" style={cell.cellStyle}>{cell.value}</div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template if:false={element.isTable}>
+                                        <div class="element-content">{element.displayText}</div>
+                                    </template>
                                     <template if:true={element.selected}>
                                         <span class="resize-handle nw" data-id={element.id} data-handle="nw" onpointerdown={handleResizePointerDown}></span>
                                         <span class="resize-handle ne" data-id={element.id} data-handle="ne" onpointerdown={handleResizePointerDown}></span>
@@ -152,6 +172,48 @@
                                 <lightning-input type="number" label="Height" value={selectedElement.height} min="2" step="0.5" data-field="height" onchange={handleNumberPropertyChange}></lightning-input>
                             </div>
                         </div>
+
+                        <template if:true={selectedIsTable}>
+                            <div class="inspector-group table-designer">
+                                <div class="inspector-heading row-title">
+                                    <span>Dynamic Table</span>
+                                    <lightning-button label="Add Column" onclick={handleAddTableColumn}></lightning-button>
+                                </div>
+
+                                <lightning-input label="Data Source" value={selectedElement.tableDataSource} data-table-field="tableDataSource" onchange={handleTablePropertyChange}></lightning-input>
+
+                                <div class="field-grid two-col table-settings-grid">
+                                    <lightning-input type="number" label="Preview Rows" min="1" max="10" value={selectedElement.tablePreviewRows} data-table-field="tablePreviewRows" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Row Height (mm)" min="3" max="30" step="0.5" value={selectedElement.tableRowHeight} data-table-field="tableRowHeight" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Header Height (mm)" min="3" max="30" step="0.5" value={selectedElement.tableHeaderHeight} data-table-field="tableHeaderHeight" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Cell Padding (mm)" min="0" max="10" step="0.5" value={selectedElement.tableCellPadding} data-table-field="tableCellPadding" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="color" label="Header Background" value={selectedElement.tableHeaderBackground} data-table-field="tableHeaderBackground" onchange={handleTablePropertyChange}></lightning-input>
+                                    <lightning-input type="color" label="Header Text" value={selectedElement.tableHeaderTextColor} data-table-field="tableHeaderTextColor" onchange={handleTablePropertyChange}></lightning-input>
+                                </div>
+
+                                <div class="toggle-row">
+                                    <lightning-input type="checkbox" label="Show Header" checked={selectedElement.tableShowHeader} data-table-field="tableShowHeader" onchange={handleTableBooleanPropertyChange}></lightning-input>
+                                    <lightning-input type="checkbox" label="Repeat Header" checked={selectedElement.tableRepeatHeader} data-table-field="tableRepeatHeader" onchange={handleTableBooleanPropertyChange}></lightning-input>
+                                </div>
+
+                                <div class="table-column-list">
+                                    <template for:each={selectedTableColumns} for:item="column">
+                                        <div key={column.id} class="table-column-card">
+                                            <div class="table-column-card-head">
+                                                <strong>{column.orderLabel}</strong>
+                                                <button class="icon-text-button" data-column-id={column.id} onclick={handleRemoveTableColumn} title="Remove column">×</button>
+                                            </div>
+                                            <lightning-input label="Header" value={column.label} data-column-id={column.id} data-column-field="label" onchange={handleTableColumnChange}></lightning-input>
+                                            <lightning-input label="Binding" value={column.binding} data-column-id={column.id} data-column-field="binding" onchange={handleTableColumnChange}></lightning-input>
+                                            <div class="field-grid two-col">
+                                                <lightning-input type="number" label="Width %" min="5" max="100" step="1" value={column.width} data-column-id={column.id} data-column-field="width" onchange={handleTableColumnNumberChange}></lightning-input>
+                                                <lightning-combobox label="Align" value={column.align} options={textAlignOptions} data-column-id={column.id} data-column-field="align" onchange={handleTableColumnSelectChange}></lightning-combobox>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
 
                         <template if:true={selectedSupportsText}>
                             <div class="inspector-group">
