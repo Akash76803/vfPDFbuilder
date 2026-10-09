@@ -2,13 +2,13 @@
 
 ## Core principle
 
-The builder stores a renderer-neutral document model. Visualforce PDF is an output adapter.
+The builder stores a renderer-neutral document model. Visualforce PDF is the output adapter.
 
 ## Layers
 
 1. **Designer UI**
    - Palette
-   - Canvas
+   - Absolute-positioned canvas
    - Layers tree
    - Property inspector
    - Data binding panel
@@ -16,7 +16,6 @@ The builder stores a renderer-neutral document model. Visualforce PDF is an outp
 
 2. **Template Model**
    - Page
-   - Sections
    - Elements
    - Styles
    - Bindings
@@ -31,9 +30,10 @@ The builder stores a renderer-neutral document model. Visualforce PDF is an outp
    - Formula values
 
 4. **VF-safe Renderer**
-   - Converts template model into supported HTML/CSS
+   - Converts the template model into Visualforce-compatible HTML/CSS
+   - Maps element coordinates to `position:absolute`
+   - Uses millimeters for X, Y, width, and height
    - Avoids unsupported modern browser CSS
-   - Handles flow layout separately from absolute layout
 
 5. **PDF Runtime**
    - Generic Visualforce page
@@ -41,11 +41,15 @@ The builder stores a renderer-neutral document model. Visualforce PDF is an outp
    - `getContentAsPDF()`
    - Save as ContentVersion
 
-## Layout modes
+## Absolute positioning model
 
-- `flow`
-- `absolute`
-- `fixedHeader`
-- `fixedFooter`
+All designer elements are absolute positioned.
 
-Dynamic tables and long content should use flow mode.
+- `x`, `y`, `width`, and `height` are stored in millimeters.
+- Canvas rendering converts millimeters to pixels only for the browser preview.
+- The Visualforce renderer outputs `position:absolute; left:Xmm; top:Ymm; width:Wmm; height:Hmm;`.
+- There is no Flow / Fixed Header / Fixed Footer layout mode in the designer.
+
+### Dynamic table rule
+
+A dynamic table also has an absolute starting X/Y position. Row growth, repeated headers, overflow, and continuation onto following pages are handled by the table pagination engine rather than introducing a second layout mode.
