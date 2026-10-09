@@ -70,7 +70,8 @@
 
                     <div class="toolbar-group toolbar-right">
                         <lightning-button label="Save" onclick={handleSave}></lightning-button>
-                        <lightning-button label="Preview PDF" variant="brand" onclick={handlePreview}></lightning-button>
+                        <lightning-button label="Generate VF" onclick={handleGenerateVf}></lightning-button>
+                        <lightning-button label="Export VF" variant="brand" onclick={handleExportVf}></lightning-button>
                     </div>
                 </div>
 
@@ -105,10 +106,20 @@
                 <div class="bottom-tabs">
                     <button class={layersTabClass} data-tab="layers" onclick={handleBottomTab}>Layers</button>
                     <button class={jsonTabClass} data-tab="json" onclick={handleBottomTab}>JSON</button>
+                    <button class={vfTabClass} data-tab="vf" onclick={handleBottomTab}>VF Code</button>
                 </div>
 
                 <template if:true={showBottomJson}>
                     <div class="json-panel"><pre>{templateJson}</pre></div>
+                </template>
+                <template if:true={showBottomVf}>
+                    <div class="json-panel vf-panel">
+                        <div class="vf-panel-toolbar">
+                            <span>Generated Visualforce Page</span>
+                            <lightning-button label="Export .page" onclick={handleExportVf}></lightning-button>
+                        </div>
+                        <pre>{vfPageSource}</pre>
+                    </div>
                 </template>
                 <template if:true={showBottomLayers}>
                     <div class="status-panel">
