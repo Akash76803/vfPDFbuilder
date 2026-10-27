@@ -227,14 +227,14 @@ export default class PdfTemplateDesigner extends LightningElement {
 
             const tableBorderWidth = item.tableBorderWidth ?? 1;
             const tableBorderColor = item.tableBorderColor || '#444444';
-            const tableColumns = (item.tableColumns || []).map((column) => ({
+            const tableColumns = this.buildSpannedColumns(item.tableColumns || []).map((column) => ({
                 ...column,
                 headerCellStyle:
-                    `width:${column.width}%;text-align:${column.align || 'left'};` +
+                    `width:${column.effectiveWidth}%;text-align:${column.align || 'left'};` +
                     `padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;` +
                     `border:${tableBorderWidth}px solid ${tableBorderColor};vertical-align:middle;`,
                 cellStyle:
-                    `width:${column.width}%;text-align:${column.align || 'left'};` +
+                    `width:${column.effectiveWidth}%;text-align:${column.align || 'left'};` +
                     `padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;` +
                     `border:${tableBorderWidth}px solid ${tableBorderColor};vertical-align:middle;`
             }));
@@ -244,7 +244,8 @@ export default class PdfTemplateDesigner extends LightningElement {
                     cells: tableColumns.map((column, columnIndex) => ({
                         key: `row-${rowIndex}-cell-${column.id}`,
                         value: rowIndex === 0 ? this.previewValueForColumn(column, columnIndex) : ' ',
-                        cellStyle: column.cellStyle
+                        cellStyle: column.cellStyle,
+                        colSpan: column.colSpan
                     }))
                 }))
                 : [];
@@ -419,10 +420,10 @@ export default class PdfTemplateDesigner extends LightningElement {
                 tableBorderWidth: 1,
                 tableBorderColor: '#444444',
                 tableColumns: [
-                    { id: 'col-description', label: 'Description', binding: '{{row.Description}}', width: 45, align: 'left' },
-                    { id: 'col-qty', label: 'Qty', binding: '{{row.Quantity}}', width: 15, align: 'right' },
-                    { id: 'col-rate', label: 'Rate', binding: '{{row.Rate}}', width: 20, align: 'right' },
-                    { id: 'col-amount', label: 'Amount', binding: '{{row.Amount}}', width: 20, align: 'right' }
+                    { id: 'col-description', label: 'Description', binding: '{{row.Description}}', width: 45, align: 'left', colSpan: 1 },
+                    { id: 'col-qty', label: 'Qty', binding: '{{row.Quantity}}', width: 15, align: 'right', colSpan: 1 },
+                    { id: 'col-rate', label: 'Rate', binding: '{{row.Rate}}', width: 20, align: 'right', colSpan: 1 },
+                    { id: 'col-amount', label: 'Amount', binding: '{{row.Amount}}', width: 20, align: 'right', colSpan: 1 }
                 ]
             } : {})
         };
@@ -651,7 +652,7 @@ export default class PdfTemplateDesigner extends LightningElement {
         const id = `col-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         const columns = [
             ...(table.tableColumns || []),
-            { id, label: `Column ${nextIndex}`, binding: `{{row.Field${nextIndex}}}`, width: 20, align: 'left' }
+            { id, label: `Column ${nextIndex}`, binding: `{{row.Field${nextIndex}}}`, width: 20, align: 'left', colSpan: 1 }
         ];
         this.patchSelected({ tableColumns: this.normalizeTableWidths(columns) });
     }
@@ -676,12 +677,23 @@ export default class PdfTemplateDesigner extends LightningElement {
     }
 
     handleTableColumnNumberChange(event) {
+        const field = event.currentTarget.dataset.columnField;
         const value = Number(event.target.value);
         if (!Number.isFinite(value)) return;
+
+        if (field === 'colSpan') {
+            this.patchTableColumn(
+                event.currentTarget.dataset.columnId,
+                { colSpan: Math.max(1, Math.min(12, Math.floor(value))) },
+                false
+            );
+            return;
+        }
+
         this.patchTableColumn(
             event.currentTarget.dataset.columnId,
-            { [event.currentTarget.dataset.columnField]: Math.max(5, value) },
-            true
+            { [field]: Math.max(5, value) },
+            field === 'width'
         );
     }
 
@@ -700,6 +712,32 @@ export default class PdfTemplateDesigner extends LightningElement {
         );
         if (normalizeWidths) columns = this.normalizeTableWidths(columns);
         this.patchSelected({ tableColumns: columns });
+    }
+
+    buildSpannedColumns(columns) {
+        const result = [];
+        let index = 0;
+
+        while (index < columns.length) {
+            const column = columns[index];
+            const requestedSpan = Math.max(1, Math.floor(Number(column.colSpan) || 1));
+            const colSpan = Math.min(requestedSpan, columns.length - index);
+            const covered = columns.slice(index, index + colSpan);
+            const effectiveWidth = covered.reduce(
+                (sum, current) => sum + (Number(current.width) || 0),
+                0
+            );
+
+            result.push({
+                ...column,
+                colSpan,
+                effectiveWidth: Math.round(effectiveWidth * 10) / 10
+            });
+
+            index += colSpan;
+        }
+
+        return result;
     }
 
     normalizeTableWidths(columns) {
@@ -979,7 +1017,7 @@ export default class PdfTemplateDesigner extends LightningElement {
     }
 
     toVfTable(item, style) {
-        const columns = item.tableColumns || [];
+        const columns = this.buildSpannedColumns(item.tableColumns || []);
         const sourceExpression = this.toVfExpression(item.tableDataSource || '{{items}}');
         const borderWidth = item.tableBorderWidth ?? 1;
         const borderColor = item.tableBorderColor || '#444444';
@@ -1003,14 +1041,14 @@ export default class PdfTemplateDesigner extends LightningElement {
                 '                        <thead>',
                 `                            <tr style="height:${item.tableHeaderHeight || 7}mm;font-size:${headerFont}pt;">`,
                 ...columns.map((column) =>
-                    `                                <th style="width:${column.width}%;text-align:${column.align || 'left'};vertical-align:middle;background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.escapeXml(column.label)}</th>`
+                    `                                <th colspan="${column.colSpan}" style="width:${column.effectiveWidth}%;text-align:${column.align || 'left'};vertical-align:middle;background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.escapeXml(column.label)}</th>`
                 ),
                 '                            </tr>',
                 '                        </thead>'
             ].join('\n');
 
         const cells = columns.map((column) =>
-            `                                <td style="width:${column.width}%;text-align:${column.align || 'left'};vertical-align:middle;padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.toVfBinding(column.binding)}</td>`
+            `                                <td colspan="${column.colSpan}" style="width:${column.effectiveWidth}%;text-align:${column.align || 'left'};vertical-align:middle;padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.toVfBinding(column.binding)}</td>`
         ).join('\n');
 
         return [
