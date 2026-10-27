@@ -101,7 +101,7 @@
                                                     <thead>
                                                         <tr style={element.headerRowStyle}>
                                                             <template for:each={element.tableColumns} for:item="column">
-                                                                <th key={column.id} style={column.headerCellStyle}>{column.label}</th>
+                                                                <th key={column.id} colspan={column.colSpan} style={column.headerCellStyle}>{column.label}</th>
                                                             </template>
                                                         </tr>
                                                     </thead>
@@ -110,7 +110,7 @@
                                                     <template for:each={element.previewRows} for:item="row">
                                                         <tr key={row.key} style={element.bodyRowStyle}>
                                                             <template for:each={row.cells} for:item="cell">
-                                                                <td key={cell.key} style={cell.cellStyle}>{cell.value}</td>
+                                                                <td key={cell.key} colspan={cell.colSpan} style={cell.cellStyle}>{cell.value}</td>
                                                             </template>
                                                         </tr>
                                                     </template>
@@ -306,6 +306,7 @@
                                             <lightning-input label="Binding" value={column.binding} data-column-id={column.id} data-column-field="binding" onchange={handleTableColumnChange}></lightning-input>
                                             <div class="field-grid two-col">
                                                 <lightning-input type="number" label="Width %" min="5" max="100" step="1" value={column.width} data-column-id={column.id} data-column-field="width" onchange={handleTableColumnNumberChange}></lightning-input>
+                                                <lightning-input type="number" label="Col Span" min="1" max="12" step="1" value={column.colSpan} data-column-id={column.id} data-column-field="colSpan" onchange={handleTableColumnNumberChange}></lightning-input>
                                                 <lightning-combobox label="Align" value={column.align} options={textAlignOptions} data-column-id={column.id} data-column-field="align" onchange={handleTableColumnSelectChange}></lightning-combobox>
                                             </div>
                                         </div>
