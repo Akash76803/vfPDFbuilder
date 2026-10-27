@@ -50,6 +50,8 @@ export default class PdfTemplateDesigner extends LightningElement {
     activeBottomTab = 'layers';
     generatedVfSource = '';
     vfDownloadHref = '';
+    controllerName = 'SamplePdfController';
+    renderAsPdf = true;
 
     showGrid = true;
     snapEnabled = true;
@@ -223,9 +225,18 @@ export default class PdfTemplateDesigner extends LightningElement {
                 ? `border-top:${effectiveBorderWidth}px ${effectiveBorderStyle} ${item.borderColor};height:0;`
                 : '';
 
+            const tableBorderWidth = item.tableBorderWidth ?? 1;
+            const tableBorderColor = item.tableBorderColor || '#444444';
             const tableColumns = (item.tableColumns || []).map((column) => ({
                 ...column,
-                cellStyle: `width:${column.width}%;text-align:${column.align || 'left'};padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;`
+                headerCellStyle:
+                    `width:${column.width}%;text-align:${column.align || 'left'};` +
+                    `padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;` +
+                    `border:${tableBorderWidth}px solid ${tableBorderColor};vertical-align:middle;`,
+                cellStyle:
+                    `width:${column.width}%;text-align:${column.align || 'left'};` +
+                    `padding:${(item.tableCellPadding || 1) * MM_TO_PX}px;` +
+                    `border:${tableBorderWidth}px solid ${tableBorderColor};vertical-align:middle;`
             }));
             const previewRows = isTable
                 ? Array.from({ length: item.tablePreviewRows || 3 }, (_, rowIndex) => ({
@@ -255,8 +266,17 @@ export default class PdfTemplateDesigner extends LightningElement {
                 tableColumns,
                 previewRows,
                 tableShowHeader: item.tableShowHeader !== false,
-                headerStyle: `height:${(item.tableHeaderHeight || 7) * MM_TO_PX}px;background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};`,
-                rowStyle: `height:${(item.tableRowHeight || 7) * MM_TO_PX}px;`,
+                tableStyle:
+                    `width:100%;border-collapse:collapse;table-layout:fixed;` +
+                    `font-size:${item.tableBodyFontSize || 9}px;background:#fff;`,
+                headerRowStyle:
+                    `height:${(item.tableHeaderHeight || 7) * MM_TO_PX}px;` +
+                    `background:${item.tableHeaderBackground || '#f3f3f3'};` +
+                    `color:${item.tableHeaderTextColor || '#181818'};` +
+                    `font-size:${item.tableHeaderFontSize || 9}px;font-weight:700;`,
+                bodyRowStyle:
+                    `height:${(item.tableRowHeight || 7) * MM_TO_PX}px;` +
+                    `font-size:${item.tableBodyFontSize || 9}px;`,
                 cssClass: selected ? `canvas-element type-${item.type} selected` : `canvas-element type-${item.type}`,
                 style:
                     `left:${item.x * MM_TO_PX}px;top:${item.y * MM_TO_PX}px;` +
@@ -321,8 +341,13 @@ export default class PdfTemplateDesigner extends LightningElement {
         const orientationCss = this.orientation === 'landscape' ? 'landscape' : 'portrait';
         const body = this.elements.map((item, index) => this.toVfElement(item, index)).join('\n');
 
+        const controllerAttr = this.controllerName?.trim()
+            ? ` controller="${this.escapeXml(this.controllerName.trim())}"`
+            : '';
+        const renderAttr = this.renderAsPdf ? ' renderAs="pdf"' : '';
+
         return [
-            '<apex:page renderAs="pdf" showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false">',
+            `<apex:page${controllerAttr}${renderAttr} showHeader="false" sidebar="false" applyHtmlTag="false" applyBodyTag="false">`,
             '    <html>',
             '        <head>',
             '            <style type="text/css">',
@@ -389,6 +414,10 @@ export default class PdfTemplateDesigner extends LightningElement {
                 tableRepeatHeader: true,
                 tableHeaderBackground: '#f3f3f3',
                 tableHeaderTextColor: '#181818',
+                tableHeaderFontSize: 9,
+                tableBodyFontSize: 9,
+                tableBorderWidth: 1,
+                tableBorderColor: '#444444',
                 tableColumns: [
                     { id: 'col-description', label: 'Description', binding: '{{row.Description}}', width: 45, align: 'left' },
                     { id: 'col-qty', label: 'Qty', binding: '{{row.Quantity}}', width: 15, align: 'right' },
@@ -741,6 +770,14 @@ export default class PdfTemplateDesigner extends LightningElement {
         this.gridSizeMm = this.clamp(Number.isFinite(value) ? value : 5, 1, 20);
     }
 
+    handleControllerNameChange(event) {
+        this.controllerName = event.target.value;
+    }
+
+    handleRenderAsPdfChange(event) {
+        this.renderAsPdf = event.target.checked;
+    }
+
     handleBottomTab(event) {
         this.activeBottomTab = event.currentTarget.dataset.tab;
     }
@@ -781,12 +818,6 @@ export default class PdfTemplateDesigner extends LightningElement {
         const next = this.future.shift();
         this.history = [...this.history, next];
         this.restoreSnapshot(next);
-    }
-
-    handleSave() {
-        // Phase 2: persist normalized template JSON through Apex.
-        // eslint-disable-next-line no-console
-        console.log('Template JSON', this.templateJson);
     }
 
     handleGenerateVf() {
@@ -950,29 +981,45 @@ export default class PdfTemplateDesigner extends LightningElement {
     toVfTable(item, style) {
         const columns = item.tableColumns || [];
         const sourceExpression = this.toVfExpression(item.tableDataSource || '{{items}}');
+        const borderWidth = item.tableBorderWidth ?? 1;
+        const borderColor = item.tableBorderColor || '#444444';
+        const cellPadding = item.tableCellPadding || 1;
+        const headerFont = item.tableHeaderFontSize || 9;
+        const bodyFont = item.tableBodyFontSize || 9;
+        const repeatHeaderCss = item.tableRepeatHeader ? '-fs-table-paginate:paginate;' : '';
+
+        const tableOuterStyle = [
+            'position:absolute',
+            `left:${item.x}mm`,
+            `top:${item.y}mm`,
+            `width:${item.width}mm`,
+            `z-index:${this.elements.findIndex((e) => e.id === item.id) + 2}`,
+            'overflow:visible'
+        ].join(';');
+
         const header = item.tableShowHeader === false
             ? ''
             : [
                 '                        <thead>',
-                '                            <tr>',
+                `                            <tr style="height:${item.tableHeaderHeight || 7}mm;font-size:${headerFont}pt;">`,
                 ...columns.map((column) =>
-                    `                                <th style="width:${column.width}%;text-align:${column.align || 'left'};background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};padding:${item.tableCellPadding || 1}mm;border:1px solid ${item.borderColor || '#444444'};">${this.escapeXml(column.label)}</th>`
+                    `                                <th style="width:${column.width}%;text-align:${column.align || 'left'};vertical-align:middle;background:${item.tableHeaderBackground || '#f3f3f3'};color:${item.tableHeaderTextColor || '#181818'};padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.escapeXml(column.label)}</th>`
                 ),
                 '                            </tr>',
                 '                        </thead>'
             ].join('\n');
 
         const cells = columns.map((column) =>
-            `                                <td style="width:${column.width}%;text-align:${column.align || 'left'};padding:${item.tableCellPadding || 1}mm;border:1px solid ${item.borderColor || '#444444'};">${this.toVfBinding(column.binding)}</td>`
+            `                                <td style="width:${column.width}%;text-align:${column.align || 'left'};vertical-align:middle;padding:${cellPadding}mm;border:${borderWidth}px solid ${borderColor};">${this.toVfBinding(column.binding)}</td>`
         ).join('\n');
 
         return [
-            `                <div class="pdf-element" style="${style}">`,
-            '                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">',
+            `                <div class="pdf-element" style="${tableOuterStyle}">`,
+            `                    <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:${bodyFont}pt;${repeatHeaderCss}">`,
             header,
             '                        <tbody>',
             `                            <apex:repeat value="${sourceExpression}" var="row">`,
-            '                            <tr>',
+            `                            <tr style="height:${item.tableRowHeight || 7}mm;page-break-inside:avoid;">`,
             cells,
             '                            </tr>',
             '                            </apex:repeat>',
