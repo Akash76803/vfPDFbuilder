@@ -68,8 +68,12 @@
                         <lightning-input class="grid-size-input" type="number" label="Grid mm" min="1" max="20" step="1" value={gridSizeMm} onchange={handleGridSizeChange}></lightning-input>
                     </div>
 
+                    <div class="toolbar-group page-code-settings">
+                        <lightning-input class="controller-input" label="Controller" value={controllerName} onchange={handleControllerNameChange}></lightning-input>
+                        <lightning-input type="checkbox" label="PDF" checked={renderAsPdf} onchange={handleRenderAsPdfChange}></lightning-input>
+                    </div>
+
                     <div class="toolbar-group toolbar-right">
-                        <lightning-button label="Save" onclick={handleSave}></lightning-button>
                         <lightning-button label="Generate VF" onclick={handleGenerateVf}></lightning-button>
                         <lightning-button label="Export VF" variant="brand" onclick={handleExportVf}></lightning-button>
                     </div>
@@ -92,20 +96,26 @@
                                     onclick={handleElementClick} onpointerdown={handleElementPointerDown}>
                                     <template if:true={element.isTable}>
                                         <div class="table-preview">
-                                            <template if:true={element.tableShowHeader}>
-                                                <div class="table-preview-row table-preview-header" style={element.headerStyle}>
-                                                    <template for:each={element.tableColumns} for:item="column">
-                                                        <div key={column.id} class="table-preview-cell" style={column.cellStyle}>{column.label}</div>
+                                            <table class="table-preview-table" style={element.tableStyle}>
+                                                <template if:true={element.tableShowHeader}>
+                                                    <thead>
+                                                        <tr style={element.headerRowStyle}>
+                                                            <template for:each={element.tableColumns} for:item="column">
+                                                                <th key={column.id} style={column.headerCellStyle}>{column.label}</th>
+                                                            </template>
+                                                        </tr>
+                                                    </thead>
+                                                </template>
+                                                <tbody>
+                                                    <template for:each={element.previewRows} for:item="row">
+                                                        <tr key={row.key} style={element.bodyRowStyle}>
+                                                            <template for:each={row.cells} for:item="cell">
+                                                                <td key={cell.key} style={cell.cellStyle}>{cell.value}</td>
+                                                            </template>
+                                                        </tr>
                                                     </template>
-                                                </div>
-                                            </template>
-                                            <template for:each={element.previewRows} for:item="row">
-                                                <div key={row.key} class="table-preview-row" style={element.rowStyle}>
-                                                    <template for:each={row.cells} for:item="cell">
-                                                        <div key={cell.key} class="table-preview-cell" style={cell.cellStyle}>{cell.value}</div>
-                                                    </template>
-                                                </div>
-                                            </template>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </template>
                                     <template if:false={element.isTable}>
@@ -274,6 +284,10 @@
                                     <lightning-input type="number" label="Cell Padding (mm)" min="0" max="10" step="0.5" value={selectedElement.tableCellPadding} data-table-field="tableCellPadding" onchange={handleTableNumberPropertyChange}></lightning-input>
                                     <lightning-input type="color" label="Header Background" value={selectedElement.tableHeaderBackground} data-table-field="tableHeaderBackground" onchange={handleTablePropertyChange}></lightning-input>
                                     <lightning-input type="color" label="Header Text" value={selectedElement.tableHeaderTextColor} data-table-field="tableHeaderTextColor" onchange={handleTablePropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Header Font" min="6" max="24" value={selectedElement.tableHeaderFontSize} data-table-field="tableHeaderFontSize" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Body Font" min="6" max="24" value={selectedElement.tableBodyFontSize} data-table-field="tableBodyFontSize" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="number" label="Grid Border" min="0" max="5" step="0.5" value={selectedElement.tableBorderWidth} data-table-field="tableBorderWidth" onchange={handleTableNumberPropertyChange}></lightning-input>
+                                    <lightning-input type="color" label="Grid Color" value={selectedElement.tableBorderColor} data-table-field="tableBorderColor" onchange={handleTablePropertyChange}></lightning-input>
                                 </div>
 
                                 <div class="toggle-row">
